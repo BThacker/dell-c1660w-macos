@@ -44,6 +44,11 @@ Requires Apple's Command Line Tools (`xcode-select --install`). Run `make`,
 development use `make test`, `make sanitize`, and `make release`; see
 [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/RELEASING.md](docs/RELEASING.md).
 
+## iOS and iPadOS
+
+This driver covers macOS only. To print from iPhone or iPad, run the AirPrint
+bridge: [dell-c1660w-airprint](https://github.com/BThacker/dell-c1660w-airprint).
+
 ## License
 
 [GPL-2.0-or-later](LICENSE), based on Dave Coffin's HBPL1 encoder
