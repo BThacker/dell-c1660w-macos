@@ -1,0 +1,7 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-or-later
+set -euo pipefail
+[[ "${3:-/}" == / ]] || exit 1
+/usr/bin/codesign --verify --strict /Library/Printers/DellC1660wNative/filter/rastertohbpl1
+/usr/bin/cupstestppd /Library/Printers/PPDs/Contents/Resources/Dell-C1660w-Native.ppd
+echo 'Driver installed. See /Library/Printers/DellC1660wNative/README.md for printer setup.'

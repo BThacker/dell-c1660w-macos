@@ -1,0 +1,36 @@
+name: Draft release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify tag matches VERSION
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" == "v$(cat VERSION)" ]]
+      - name: Build tested release
+        run: make release
+      - name: Create draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          version="$(cat VERSION)"
+          directory="dist/$version-unsigned"
+          gh release create "$GITHUB_REF_NAME" "$directory"/* \
+            --verify-tag --draft \
+            --title "Dell C1660w Native $version" \
+            --notes-file "$directory/RELEASE_NOTES.md"

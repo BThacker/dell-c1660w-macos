@@ -1,0 +1,26 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-2.0-or-later
+set -euo pipefail
+[[ "${3:-/}" == / ]] || { echo 'Install on the running system volume.' >&2; exit 1; }
+[[ "$(/usr/sbin/sysctl -n hw.optional.arm64 2>/dev/null)" == 1 ]] || {
+    echo 'Apple Silicon is required.' >&2; exit 1;
+}
+os_version="$(/usr/bin/sw_vers -productVersion)"
+[[ "${os_version%%.*}" -ge 26 ]] || { echo 'macOS 26 or later is required.' >&2; exit 1; }
+driver=/Library/Printers/DellC1660wNative
+ppd=/Library/Printers/PPDs/Contents/Resources/Dell-C1660w-Native.ppd
+for path in /Library/Printers "$driver" "$driver/filter" "$driver/scripts" \
+    /Library/Printers/PPDs /Library/Printers/PPDs/Contents /Library/Printers/PPDs/Contents/Resources \
+    "$driver/filter/rastertohbpl1" "$driver/INSTALL-MARKER" "$driver/LICENSE" \
+    "$driver/VERSION" "$driver/README.md" "$driver/UPSTREAM.md" "$ppd"; do
+    [[ ! -L "$path" ]] || { echo "Refusing symbolic-link destination: $path" >&2; exit 1; }
+done
+if [[ -e "$driver" ]] && ! /usr/bin/grep -Eq '^DellC1660wNative [0-9]+\.[0-9]+\.[0-9]+$' "$driver/INSTALL-MARKER"; then
+    echo 'An unrecognized directory exists at the installation location.' >&2; exit 1
+fi
+if [[ -f "$ppd" ]] && ! /usr/bin/grep -Fqx '*ModelName: "Dell C1660w Native"' "$ppd"; then
+    echo 'An unrelated PPD exists at the installation location.' >&2; exit 1
+fi
+for script in common setup diagnose uninstall; do
+    [[ ! -L "$driver/scripts/$script.sh" ]] || { echo 'Refusing linked management script.' >&2; exit 1; }
+done

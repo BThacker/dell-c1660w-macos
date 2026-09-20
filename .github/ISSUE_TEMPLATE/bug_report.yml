@@ -1,0 +1,32 @@
+name: Bug report or hardware test
+description: Report a software issue or physical C1660w test result.
+body:
+  - type: markdown
+    attributes:
+      value: 'Redact personal documents, usernames, job titles, and network addresses. For security issues, follow SECURITY.md.'
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: macOS version, processor architecture, driver version, and printer model/firmware.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps and print settings
+      description: Include paper size, color mode, page range, copies, connection, and application.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual result
+      description: Describe physical output separately from Print Center status.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted diagnostics or test results
+      render: text
