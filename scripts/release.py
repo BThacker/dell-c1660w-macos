@@ -218,6 +218,14 @@ It does not change your default printer or create a queue. Your printer must alr
                     'package': package.name, 'package_sha256': sha256(package),
                     'build_macos': subprocess.check_output(['sw_vers','-productVersion'],text=True).strip()}
         (products / 'release.json').write_text(json.dumps(metadata, indent=2) + '\n')
+        signing_note = (
+            'If macOS warns that the package is from an unidentified developer, allow it\n'
+            'under **System Settings → Privacy & Security → Security → Open Anyway**, or\n'
+            'clear the download flag and open it again:\n\n'
+            '    xattr -d com.apple.quarantine ~/Downloads/DellC1660wNative-*-unsigned.pkg\n'
+            if kind == 'unsigned' else
+            'The package is signed and notarized, so it opens normally.\n'
+        )
         notes = f'''# Dell C1660w Native {version}
 
 Native Apple Silicon driver for macOS 26+, using the normal print dialog over Wi-Fi.
@@ -233,9 +241,7 @@ Provided as is, without warranty of any kind, to the extent permitted by applica
 
 ## Installation
 
-The installer is **{kind}**. Unsigned downloads may be blocked by Gatekeeper;
-building from the matching source archive is an alternative.
-
+The installer is **{kind}**. {signing_note}
 Open the PKG to install. Then run:
 
     sudo /Library/Printers/DellC1660wNative/scripts/setup.sh PRINTER_IP
