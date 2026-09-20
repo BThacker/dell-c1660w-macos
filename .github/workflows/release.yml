@@ -7,9 +7,11 @@ permissions:
 jobs:
   release:
     runs-on: macos-26
-    timeout-minutes: 20
+    timeout-minutes: 45
     permissions:
       contents: write
+    env:
+      SIGNING_CERTIFICATE: ${{ secrets.APPLE_CERT_APPLICATION_P12_BASE64 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -19,17 +21,84 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$GITHUB_REF_NAME" == "v$(cat VERSION)" ]]
-      - name: Build tested release
-        run: make release
+      - name: Select release mode
+        id: mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${SIGNING_CERTIFICATE}" ]]; then
+            echo "kind=notarized" >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=unsigned" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Import signing identities
+        if: steps.mode.outputs.kind == 'notarized'
+        shell: bash
+        env:
+          APPLICATION_P12: ${{ secrets.APPLE_CERT_APPLICATION_P12_BASE64 }}
+          APPLICATION_PASSWORD: ${{ secrets.APPLE_CERT_APPLICATION_PASSWORD }}
+          INSTALLER_P12: ${{ secrets.APPLE_CERT_INSTALLER_P12_BASE64 }}
+          INSTALLER_PASSWORD: ${{ secrets.APPLE_CERT_INSTALLER_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          printf '%s' "$APPLICATION_P12" | base64 --decode > "$RUNNER_TEMP/application.p12"
+          printf '%s' "$INSTALLER_P12" | base64 --decode > "$RUNNER_TEMP/installer.p12"
+          security import "$RUNNER_TEMP/application.p12" -k "$keychain" \
+            -P "$APPLICATION_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security import "$RUNNER_TEMP/installer.p12" -k "$keychain" \
+            -P "$INSTALLER_PASSWORD" -T /usr/bin/productbuild -T /usr/bin/productsign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
+            -k "$KEYCHAIN_PASSWORD" "$keychain"
+          security default-keychain -s "$keychain"
+          security list-keychains -d user -s "$keychain" login.keychain-db
+          rm -f "$RUNNER_TEMP/application.p12" "$RUNNER_TEMP/installer.p12"
+          application="$(security find-identity -v -p codesigning "$keychain" |
+            sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p' | head -1)"
+          installer="$(security find-identity -v "$keychain" |
+            sed -n 's/.*"\(Developer ID Installer:.*\)"/\1/p' | head -1)"
+          if [[ -z "$application" || -z "$installer" ]]; then
+            echo "Developer ID identities were not found in the imported certificates." >&2
+            exit 1
+          fi
+          echo "DEVELOPER_ID_APPLICATION=$application" >> "$GITHUB_ENV"
+          echo "DEVELOPER_ID_INSTALLER=$installer" >> "$GITHUB_ENV"
+      - name: Build release
+        shell: bash
+        env:
+          KIND: ${{ steps.mode.outputs.kind }}
+          NOTARY_PROFILE: dell-c1660w-notary
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_NOTARY_PASSWORD: ${{ secrets.APPLE_NOTARY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ "$KIND" == "notarized" ]]; then
+            xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+              --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_NOTARY_PASSWORD"
+            python3 scripts/release.py --signed
+          else
+            python3 scripts/release.py
+          fi
+      - name: Clean up keychain
+        if: always() && steps.mode.outputs.kind == 'notarized'
+        shell: bash
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
       - name: Create draft release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          KIND: ${{ steps.mode.outputs.kind }}
         run: |
           set -euo pipefail
           version="$(cat VERSION)"
-          directory="dist/$version-unsigned"
+          directory="dist/$version-$KIND"
           gh release create "$GITHUB_REF_NAME" "$directory"/* \
             --verify-tag --draft \
             --title "Dell C1660w Native $version" \
