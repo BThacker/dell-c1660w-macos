@@ -7,16 +7,26 @@ color/grayscale, Letter/A4, and 600 dpi.
 
 ## Install
 
-Download the arm64 `.pkg` from Releases, then run (replace `PRINTER_IP` with the
-printer's Wi-Fi address):
+Download the arm64 `.pkg` from Releases and open it. Then run (replace
+`PRINTER_IP` with the printer's Wi-Fi address):
 
 ```sh
 sudo /Library/Printers/DellC1660wNative/scripts/setup.sh PRINTER_IP
 ```
 
 Select **Dell C1660w Native** when printing. After an upgrade, run setup again;
-this restores the Letter/color defaults. The installer is unsigned, so macOS may
-warn that it is from an unidentified developer.
+this restores the Letter/color defaults.
+
+### If macOS blocks the installer
+
+The package is unsigned, so macOS may warn that it is from an unidentified
+developer. Try to open it, then allow it under **System Settings → Privacy &
+Security → Security → Open Anyway**. From Terminal you can instead clear the
+download flag and open it again:
+
+```sh
+xattr -d com.apple.quarantine ~/Downloads/DellC1660wNative-*.pkg
+```
 
 Diagnose or remove with:
 

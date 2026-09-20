@@ -23,6 +23,16 @@ sudo /Library/Printers/DellC1660wNative/scripts/uninstall.sh
 
 For a stopped job, check the connection and resume or cancel it in Print Center.
 
+## Reinstalling from a download
+
+Downloads are unsigned, so macOS may warn that the package is from an
+unidentified developer. Allow it under **System Settings → Privacy & Security →
+Security → Open Anyway**, or clear the download flag and open it again:
+
+```sh
+xattr -d com.apple.quarantine ~/Downloads/DellC1660wNative-*.pkg
+```
+
 ## License
 
 GPL-2.0-or-later; see LICENSE and UPSTREAM.md. Matching source is supplied as
