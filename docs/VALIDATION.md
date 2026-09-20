@@ -4,10 +4,11 @@
 
 Tested on macOS 26.5.1 (25F80), Apple Silicon:
 
-- 12 tests passed, including the complete macOS PDF-to-HBPL filter chain.
-- 10 applicable sanitizer tests passed; two PDF integration tests run separately.
+- 12 tests passed, including the full macOS PDF-to-HBPL filter chain.
+- Memory-safety checks passed for the 10 applicable tests; two PDF integration
+  tests run separately.
 - PPD validation, staged installation, and native binary/signature checks passed.
-- Runtime dependencies are system CUPS and libSystem only.
+- The filter depends only on system CUPS and libSystem; no third-party runtime.
 
 Coverage includes RGB/grayscale, Letter/A4, margins, blank/multiple pages,
 landscape rotation, page ranges, copies/collation, malformed input, cancellation,
